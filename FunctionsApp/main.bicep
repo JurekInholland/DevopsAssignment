@@ -85,7 +85,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
 resource hostingPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
   name: hostingPlanName
   location: location
-  kind: 'linux'
+  // kind: 'linux'
   sku: {
     name: 'Y1'
     capacity: 1
@@ -98,11 +98,11 @@ resource hostingPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
 resource azureFunction 'Microsoft.Web/sites@2020-12-01' = {
   name: functionAppName
   location: location
-  kind: 'functionapp,linux'
+  kind: 'functionapp'
   properties: {
     serverFarmId: hostingPlan.id
     siteConfig: {
-      linuxFxVersion: 'DOTNET|6.0'
+      // linuxFxVersion: 'DOTNET|6.0'
       appSettings: [
         //     {
         //       name: 'AzureWebJobsDashboard'
