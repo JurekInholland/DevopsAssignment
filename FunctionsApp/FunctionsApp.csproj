@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <AzureFunctionsVersion>V4</AzureFunctionsVersion>
-        <LangVersion>default</LangVersion>
+        <LangVersion>10</LangVersion>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Azure.Storage.Queues" Version="12.11.1" />
@@ -11,6 +11,7 @@
         <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage" Version="5.0.0" />
         <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="5.0.1" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
         <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.2" />
         <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
@@ -30,8 +31,7 @@
         </None>
     </ItemGroup>
     <ItemGroup>
-      <Reference Include="Microsoft.Extensions.Http">
-        <HintPath>..\..\..\.AzureToolsForIntelliJ\AzureFunctionsCoreTools\v4\4.21.0\Microsoft.Extensions.Http.dll</HintPath>
-      </Reference>
+      <Reference Include="Microsoft.Extensions.Http" />
     </ItemGroup>
+
 </Project>
