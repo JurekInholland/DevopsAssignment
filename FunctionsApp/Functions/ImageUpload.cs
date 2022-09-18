@@ -124,7 +124,7 @@ public class ImageUpload
     /// It fetches the given image from blob storage and processes it.
     /// </summary>
     [FunctionName("UploadQueueTrigger")]
-    public async Task RunAsync2([QueueTrigger("image-queue", Connection = "StorageAccountString")] string fileName, ILogger log)
+    public async Task RunAsync2([QueueTrigger("image-queue", Connection = "AzureWebJobsStorage")] string fileName, ILogger log)
     {
         var id = fileName.Split('.')[0];
 
