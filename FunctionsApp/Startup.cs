@@ -14,7 +14,7 @@ public class Startup : FunctionsStartup
     {
         builder.Services.AddAzureClients(clientBuilder =>
         {
-            string storageAccountString = Environment.GetEnvironmentVariable("StorageAccountString");
+            string storageAccountString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
             clientBuilder.AddBlobServiceClient(storageAccountString);
             clientBuilder.AddQueueServiceClient(storageAccountString);
             clientBuilder.AddTableServiceClient(storageAccountString);
