@@ -175,4 +175,10 @@ resource azureFunction 'Microsoft.Web/sites@2020-12-01' = {
       ]
     }
   }
+  resource config 'config' = {
+    name: 'web'
+    properties: {
+      netFrameworkVersion: 'v6.0'
+    }
+  }
 }
