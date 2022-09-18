@@ -13,7 +13,7 @@
     <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="1" />
     <option name="PROJECT_KIND" value="RunnableProjectKind(name=AzureFunctions)" />
     <option name="PROJECT_TFM" value="net6.0" />
-    <option name="FUNCTION_NAMES" value="upload, UploadQueueTrigger, status, DeleteStorageClients, CreateStorageClients, Results" />
+    <option name="FUNCTION_NAMES" value="upload, UploadQueueTrigger, status, DeleteStorageClients, CreateStorageClients, results" />
     <browser url="http://localhost:7071" />
     <method v="2">
       <option name="BuildFunctionsProject" enabled="true" />

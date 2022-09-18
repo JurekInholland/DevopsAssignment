@@ -1,14 +1,16 @@
 ﻿param location string = resourceGroup().location
 
 param storageAccountName string = 'storage${uniqueString(resourceGroup().id)}'
+param functionAppName string = 'function${uniqueString(resourceGroup().id)}'
+param hostingPlanName string = 'hostingPlan${uniqueString(resourceGroup().id)}'
+
 
 param storageContainerName string = 'image-container'
 param queueName string = 'image-queue'
 param queueName2 string = 'process-queue'
 param tableName string = 'imagetable'
 
-param functionAppName string = 'function${uniqueString(resourceGroup().id)}'
-param hostingPlanName string = 'hostingPlan${uniqueString(resourceGroup().id)}'
+
 
 // Storage
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
@@ -83,25 +85,45 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
 resource hostingPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
   name: hostingPlanName
   location: location
+  kind: 'linux'
   sku: {
     name: 'Y1'
-    tier: 'Dynamic'
+    capacity: 1
   }
-  properties: {}
+  properties: {
+    reserved: true
+  }
 }
 
 resource azureFunction 'Microsoft.Web/sites@2020-12-01' = {
   name: functionAppName
   location: location
-  kind: 'functionapp'
+  kind: 'functionapp,linux'
   properties: {
     serverFarmId: hostingPlan.id
     siteConfig: {
+      linuxFxVersion: 'DOTNET|6.0'
       appSettings: [
         //     {
         //       name: 'AzureWebJobsDashboard'
         //       value: 'DefaultEndpointsProtocol=https;AccountName=storageAccountName;AccountKey=${listKeys('storageAccountID1', '2019-06-01').key1}'
         //     }
+        {
+          name: 'AzureWebJobsStorage__accountName'
+          value: storageAccount.name
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        // {
+        //   name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+        //   value: appInsightsComponents.properties.InstrumentationKey
+        // }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'dotnet'
+        }
         {
           name: 'AzureWebJobsStorage'
           value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(storageAccount.id, storageAccount.apiVersion).keys[0].value}'

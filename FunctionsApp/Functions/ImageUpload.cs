@@ -21,8 +21,6 @@ using Newtonsoft.Json;
 
 namespace FunctionsApp.Functions;
 
-
-
 public class ImageUpload
 {
     private readonly QueueClient _queueClient;
@@ -96,7 +94,7 @@ public class ImageUpload
         }
         else
         {
-            return new OkObjectResult($"Your file has already been processed!\nresult: /api/Results?id=converted_{md5Hash + ext}");
+            return new OkObjectResult($"Your file has already been processed!\nresult: /api/results?id={md5Hash}");
         }
 
         var sasToken = blob.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddHours(1));
@@ -107,17 +105,17 @@ public class ImageUpload
 
         try
         {
-            Response<TableEntity> entry = await _tableClient.GetEntityAsync<TableEntity>("status", "converted_" + md5Hash + ext);
+            Response<TableEntity> entry = await _tableClient.GetEntityAsync<TableEntity>("status", md5Hash);
             Console.WriteLine(entry);
         }
         catch (RequestFailedException e)
         {
             if (e.Status == 404)
-                await _tableClient.AddEntityAsync(new StatusEntry("converted_" + md5Hash + ext, "pending"));
+                await _tableClient.AddEntityAsync(new StatusEntry(md5Hash, "pending"));
         }
 
         return new OkObjectResult(
-            $"Your file is being processed.\nid: {md5Hash}\nurl: {sasTokenString}\ntest: /api/Results?id=converted_{md5Hash}{ext}");
+            $"Your file is being processed.\nid: {md5Hash}\nurl: {sasTokenString}\nstatus: /api/status?id={md5Hash}\nresult: /api/results?id={md5Hash}");
     }
 
 
@@ -126,42 +124,35 @@ public class ImageUpload
     /// It fetches the given image from blob storage and processes it.
     /// </summary>
     [FunctionName("UploadQueueTrigger")]
-    public async Task RunAsync2([QueueTrigger("image-queue", Connection = "StorageAccountString")] string myQueueItem, ILogger log)
+    public async Task RunAsync2([QueueTrigger("image-queue", Connection = "StorageAccountString")] string fileName, ILogger log)
     {
+        var id = fileName.Split('.')[0];
+
         log.LogInformation($"UploadQueueTrigger");
-        var image = _blobContainerClient.GetBlobClient(myQueueItem);
+        var image = _blobContainerClient.GetBlobClient(fileName);
         var ms = new MemoryStream();
 
 
-        await UpdateStatus(myQueueItem, "downloading image");
+        await UpdateStatus(id, "downloading image");
         log.LogInformation("Downloading image...");
         await image.DownloadToAsync(ms);
 
-        var header = new BlobHttpHeaders
-        {
-            ContentType = (await image.GetPropertiesAsync()).Value.ContentType
-        };
 
-        await UpdateStatus(myQueueItem, "extracting colors");
-
+        await UpdateStatus(id, "extracting colors");
         log.LogInformation("Extracting primary colors...");
         var colors = ImageHelper.EditImage(ms.ToArray(), 2);
 
 
-        await UpdateStatus(myQueueItem, "fetching color name");
-
+        await UpdateStatus(id, "fetching color name");
         log.LogInformation("Fetching color name...");
-
         string colorName = await GetColorName(colors.Item2[0]);
 
 
-        await UpdateStatus(myQueueItem, "fetching wiki extract");
-
-        log.LogInformation($"Fetching wiki extract for {colorName}...");
+        await UpdateStatus(id, "fetching wiki extract");
         string wikiExtract = await FetchWikiExtract(colorName);
 
 
-        BlobClient blob = _blobContainerClient.GetBlobClient("converted_" + myQueueItem);
+        BlobClient blob = _blobContainerClient.GetBlobClient("converted_" + id + ".png");
 
         if (await blob.ExistsAsync())
         {
@@ -169,7 +160,7 @@ public class ImageUpload
         }
 
 
-        await UpdateStatus(myQueueItem, "adding text");
+        await UpdateStatus(id, "adding text");
 
         log.LogInformation("Adding text to image...");
         byte[] processedImage = ImageHelper.AddTextToImage(ms.ToArray(),
@@ -177,14 +168,19 @@ public class ImageUpload
             (wikiExtract, (10, 80), 24, "ffffff")
         );
 
-        await UpdateStatus(myQueueItem, "uploading image");
+        await UpdateStatus(id, "uploading image");
 
         log.LogInformation("Uploading processed image...");
+        var header = new BlobHttpHeaders
+        {
+            ContentType = "image/png"
+        };
+
         await blob.UploadAsync(new MemoryStream(processedImage), header);
 
-        await UpdateStatus(myQueueItem, "done");
+        await UpdateStatus(id, "done");
 
-        log.LogInformation($"C# Queue trigger function processed: {myQueueItem}");
+        log.LogInformation($"C# Queue trigger function processed: {fileName}");
     }
 
     /// <summary>
@@ -207,7 +203,7 @@ public class ImageUpload
 
     private async Task UpdateStatus(string id, string newStatus)
     {
-        StatusEntry entity = await _tableClient.GetEntityAsync<StatusEntry>("status", "converted_" + id);
+        StatusEntry entity = await _tableClient.GetEntityAsync<StatusEntry>("status", id);
         entity.Status = newStatus;
         await _tableClient.UpdateEntityAsync(entity, ETag.All, TableUpdateMode.Replace);
     }

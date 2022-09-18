@@ -23,7 +23,7 @@ public class Results
         _tableClient = tableServiceClient.GetTableClient(Environment.GetEnvironmentVariable("TableName"));
     }
 
-    [FunctionName("Results")]
+    [FunctionName("results")]
     public async Task<IActionResult> RunAsync(
         [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
         HttpRequest req, ILogger log)
@@ -31,7 +31,7 @@ public class Results
         log.LogInformation("C# HTTP trigger function processed a request.");
 
         string id = req.Query["id"];
-        BlobClient blobClient = _blobContainerClient.GetBlobClient(id);
+        BlobClient blobClient = _blobContainerClient.GetBlobClient($"converted_{id}.png");
 
         // Happy path
         if (await blobClient.ExistsAsync())
@@ -51,7 +51,7 @@ public class Results
         // If not found, return 404
         catch (RequestFailedException e)
         {
-            return new NotFoundObjectResult($"The image {id} does not exist.");
+            return new NotFoundObjectResult($"The image with id '{id}' does not exist.");
         }
     }
 }
