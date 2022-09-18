@@ -2,8 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionsApp", "FunctionsApp\FunctionsApp.csproj", "{E9AD622C-E9DF-4371-B184-75F0038DF8EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Company.FunctionApp1", "Company.FunctionApp1\Company.FunctionApp1.csproj", "{687F5F70-2DE0-45C4-A4DE-659479173C28}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,10 +12,6 @@ Global
 		{E9AD622C-E9DF-4371-B184-75F0038DF8EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E9AD622C-E9DF-4371-B184-75F0038DF8EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E9AD622C-E9DF-4371-B184-75F0038DF8EF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{687F5F70-2DE0-45C4-A4DE-659479173C28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{687F5F70-2DE0-45C4-A4DE-659479173C28}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{687F5F70-2DE0-45C4-A4DE-659479173C28}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{687F5F70-2DE0-45C4-A4DE-659479173C28}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(RiderSharedRunConfigurations) = postSolution
 	EndGlobalSection

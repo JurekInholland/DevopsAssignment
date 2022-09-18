@@ -1,15 +1,17 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using AssignmentFunction.ImageHelper;
 using Azure;
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Azure.Storage.Queues;
 using Azure.Storage.Sas;
+using FunctionsApp.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -19,51 +21,24 @@ using Newtonsoft.Json;
 
 namespace FunctionsApp.Functions;
 
-public class TableEntry : ITableEntity
-{
-    public string PartitionKey { get; set; }
-    public string RowKey { get; set; }
-    public DateTimeOffset? Timestamp { get; set; }
-    public ETag ETag { get; set; }
 
-    public string Status;
-
-    public TableEntry(string key, string status)
-    {
-        PartitionKey = "status";
-        RowKey = key;
-        Status = status;
-    }
-
-    public TableEntry()
-    {
-    }
-}
 
 public class ImageUpload
 {
-    // private readonly BlobServiceClient _blobServiceClient;
-    // private readonly QueueServiceClient _queueServiceClient;
     private readonly QueueClient _queueClient;
-
     private readonly BlobContainerClient _blobContainerClient;
-
-    private readonly MD5 _md5;
     private readonly TableClient _tableClient;
     private readonly HttpClient _httpClient;
-
 
     public ImageUpload(BlobServiceClient blobServiceClient, QueueServiceClient queueServiceClient,
         TableServiceClient tableServiceClient, HttpClient httpClient)
     {
-        _blobContainerClient = blobServiceClient.GetBlobContainerClient("container");
+        _blobContainerClient = blobServiceClient.GetBlobContainerClient(Environment.GetEnvironmentVariable("BlobContainerName"));
         _queueClient = queueServiceClient.GetQueueClient(Environment.GetEnvironmentVariable("ImageUploadQueueName"));
 
-        _tableClient = tableServiceClient.GetTableClient("statusTable");
+        _tableClient = tableServiceClient.GetTableClient(Environment.GetEnvironmentVariable("TableName"));
 
         _httpClient = httpClient;
-
-        _md5 = MD5.Create();
     }
 
 
@@ -72,9 +47,9 @@ public class ImageUpload
     /// If an image is passed via form data, it is uploaded to blob storage and a message is added to a queue.
     /// This will trigger the UploadQueueTrigger function.
     /// </summary>
-    [FunctionName("ImageUpload")]
+    [FunctionName("upload")]
     public async Task<IActionResult> RunAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "")]
         HttpRequest req, ILogger log)
 
 
@@ -90,6 +65,10 @@ public class ImageUpload
 
         string ext;
 
+        var header = new BlobHttpHeaders();
+        header.ContentType = f.ContentType;
+
+
         if (f.ContentType == "image/jpeg")
         {
             ext = ".jpg";
@@ -100,31 +79,24 @@ public class ImageUpload
         }
         else
         {
-            return new OkObjectResult("Invalid file type");
+            return new OkObjectResult("Invalid file type. Please upload a .jpg or .png file.");
         }
 
-        // var md5hash = new MD5CryptoServiceProvider().ComputeHash(myBlob);
-        // // convert byte array to string
-        // var stringmd5 = BitConverter.ToString(md5hash).Replace("-", "").ToLower();
 
-        var stringmd5 = Helpers.GenerateMd5Hash(myBlob);
+        string md5Hash = Helpers.GenerateMd5Hash(myBlob);
 
-        BlobClient blob = _blobContainerClient.GetBlobClient(stringmd5 + ext);
+        BlobClient blob = _blobContainerClient.GetBlobClient(md5Hash + ext);
 
         if (!await blob.ExistsAsync())
         {
             myBlob.Position = 0;
-            await blob.UploadAsync(myBlob);
-            // await _queueClient.SendMessageAsync(stringmd5 + ext);
-            string encodedStr = Convert.ToBase64String(Encoding.UTF8.GetBytes(stringmd5 + ext));
+            await blob.UploadAsync(myBlob, header);
+            string encodedStr = Convert.ToBase64String(Encoding.UTF8.GetBytes(md5Hash + ext));
             await _queueClient.SendMessageAsync(encodedStr);
         }
         else
         {
-            Console.WriteLine("File already exists");
-            // Todo: remove
-            string encodedStr = Convert.ToBase64String(Encoding.UTF8.GetBytes(stringmd5 + ext));
-            await _queueClient.SendMessageAsync(encodedStr);
+            return new OkObjectResult($"Your file has already been processed!\nresult: /api/Results?id=converted_{md5Hash + ext}");
         }
 
         var sasToken = blob.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddHours(1));
@@ -132,81 +104,62 @@ public class ImageUpload
         // generate sas uri of blob
         // blob.GenerateSasUri();
 
-        var rnd = new Random();
-        var rndId = rnd.Next(0, 999);
 
-        // try
-        // {
-        //     var entry = await _tableClient.GetEntityAsync<TableEntity>("status", stringmd5);
-        //     Console.WriteLine(entry);
-        // }
-        // catch (RequestFailedException e)
-        // {
-        //     Console.WriteLine(e);
-        //     if (e.Status == 404)
-        //         await _tableClient.AddEntityAsync(new TableEntry(stringmd5, "pending"));
-        // }
+        try
+        {
+            Response<TableEntity> entry = await _tableClient.GetEntityAsync<TableEntity>("status", "converted_" + md5Hash + ext);
+            Console.WriteLine(entry);
+        }
+        catch (RequestFailedException e)
+        {
+            if (e.Status == 404)
+                await _tableClient.AddEntityAsync(new StatusEntry("converted_" + md5Hash + ext, "pending"));
+        }
 
-        await DebugDelete(stringmd5, ext);
-        return new OkObjectResult(stringmd5);
-
-        // await queue.AddAsync("asd");
-        // return new OkResult();
-        // log.LogInformation("C# HTTP trigger function processed a request.");
-        //
-        // string name = req.Query["name"];
-        //
-        // var requestBody = await req.ReadAsStringAsync().ConfigureAwait(false);
-        // dynamic data = JsonConvert.DeserializeObject(requestBody);
-        // name = name ?? data?.name;
-        //
-        // // var queueMessage = new CloudQueueMessage(requestBody);
-        // await sampleQueue.SendMessageAsync(requestBody).ConfigureAwait(false);
-        //
-        //
-        // return name != null
-        //     ? (ActionResult) new OkObjectResult($"Hello, {name}")
-        //     : new BadRequestObjectResult("Please pass a name on the query string or in the request body");
+        return new OkObjectResult(
+            $"Your file is being processed.\nid: {md5Hash}\nurl: {sasTokenString}\ntest: /api/Results?id=converted_{md5Hash}{ext}");
     }
 
-    private async Task DebugDelete(string hash, string ext)
-    {
-        // await _blobContainerClient.DeleteBlobAsync(hash + ext);
-        await _tableClient.DeleteEntityAsync("status", hash);
-    }
 
     /// <summary>
     /// This function is called via queue trigger.
     /// It fetches the given image from blob storage and processes it.
     /// </summary>
     [FunctionName("UploadQueueTrigger")]
-    public async Task RunAsync2([QueueTrigger("testq", Connection = "StorageAccountString")] string myQueueItem, ILogger log)
+    public async Task RunAsync2([QueueTrigger("image-queue", Connection = "StorageAccountString")] string myQueueItem, ILogger log)
     {
         log.LogInformation($"UploadQueueTrigger");
         var image = _blobContainerClient.GetBlobClient(myQueueItem);
-
-
         var ms = new MemoryStream();
+
+
+        await UpdateStatus(myQueueItem, "downloading image");
+        log.LogInformation("Downloading image...");
         await image.DownloadToAsync(ms);
 
+        var header = new BlobHttpHeaders
+        {
+            ContentType = (await image.GetPropertiesAsync()).Value.ContentType
+        };
 
-        var colors = ImageHelper.EditImage(ms.ToArray());
+        await UpdateStatus(myQueueItem, "extracting colors");
 
-        var res = await _httpClient.GetAsync($"https://www.thecolorapi.com/id?hex={colors.Item2?[0]}");
-
-        // parse json response
-        var json = await res.Content.ReadAsStringAsync();
-        dynamic data = JsonConvert.DeserializeObject(json);
-        var colorName = data.name.value;
+        log.LogInformation("Extracting primary colors...");
+        var colors = ImageHelper.EditImage(ms.ToArray(), 2);
 
 
-        var quoteResponse = await _httpClient.GetAsync($"https://api.quotable.io/search/quotes?query={colorName}&fields=content,tags");
+        await UpdateStatus(myQueueItem, "fetching color name");
 
-        var resJson = await quoteResponse.Content.ReadAsStringAsync();
-        dynamic quoteData = JsonConvert.DeserializeObject(resJson);
-        string quote = quoteData.results[0].content;
-        // var outms = new MemoryStream();
-        // await _blobContainerClient.GetBlobClient("converted").UploadAsync(new BinaryData(outp));
+        log.LogInformation("Fetching color name...");
+
+        string colorName = await GetColorName(colors.Item2[0]);
+
+
+        await UpdateStatus(myQueueItem, "fetching wiki extract");
+
+        log.LogInformation($"Fetching wiki extract for {colorName}...");
+        string wikiExtract = await FetchWikiExtract(colorName);
+
 
         BlobClient blob = _blobContainerClient.GetBlobClient("converted_" + myQueueItem);
 
@@ -215,13 +168,56 @@ public class ImageUpload
             await blob.DeleteAsync();
         }
 
+
+        await UpdateStatus(myQueueItem, "adding text");
+
+        log.LogInformation("Adding text to image...");
         byte[] processedImage = ImageHelper.AddTextToImage(ms.ToArray(),
-            (quote, (10, 10), 24, "ffffff")
+            (colorName, (10, 10), 48, "ffffff"),
+            (wikiExtract, (10, 80), 24, "ffffff")
         );
 
-        await blob.UploadAsync(new BinaryData(processedImage));
+        await UpdateStatus(myQueueItem, "uploading image");
 
-        Console.WriteLine("qTrig");
+        log.LogInformation("Uploading processed image...");
+        await blob.UploadAsync(new MemoryStream(processedImage), header);
+
+        await UpdateStatus(myQueueItem, "done");
+
         log.LogInformation($"C# Queue trigger function processed: {myQueueItem}");
+    }
+
+    /// <summary>
+    /// Returns the first paragraph of the wikipedia article for the given query.
+    /// </summary>
+    private async Task<string> FetchWikiExtract(string query)
+    {
+        query = query.Split(" ")[0];
+
+        HttpResponseMessage response = await _httpClient.GetAsync(
+            $"https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exlimit=1&titles={query}&explaintext=1&exsectionformat=plain&format=json");
+        string content = await response.Content.ReadAsStringAsync();
+        WikiResult wikiResult = JsonConvert.DeserializeObject<WikiResult>(content);
+
+        if (wikiResult.query.Pages.Count == 0)
+            return $"No wikipedia article found for '{query}'.";
+
+        return wikiResult.query.Pages.Values.First().Extract.Split(". ")[0] + ".";
+    }
+
+    private async Task UpdateStatus(string id, string newStatus)
+    {
+        StatusEntry entity = await _tableClient.GetEntityAsync<StatusEntry>("status", "converted_" + id);
+        entity.Status = newStatus;
+        await _tableClient.UpdateEntityAsync(entity, ETag.All, TableUpdateMode.Replace);
+    }
+
+    private async Task<string> GetColorName(string hexColor)
+    {
+        var res = await _httpClient.GetAsync($"https://www.thecolorapi.com/id?hex={hexColor}");
+
+        var content = await res.Content.ReadAsStringAsync();
+        dynamic json = JsonConvert.DeserializeObject(content);
+        return json.name.value;
     }
 }
