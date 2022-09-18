@@ -82,17 +82,20 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
   }
 }
 
-resource hostingPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
+resource hostingPlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: hostingPlanName
   location: location
   // kind: 'linux'
   sku: {
     name: 'Y1'
-    capacity: 1
+    tier: 'Dynamic'
+    size: 'Y1'
+    family: 'Y'
+    capacity: 0
   }
-  properties: {
-    reserved: true
-  }
+  // properties: {
+    // reserved: true
+  // }
 }
 
 resource azureFunction 'Microsoft.Web/sites@2020-12-01' = {
@@ -102,6 +105,7 @@ resource azureFunction 'Microsoft.Web/sites@2020-12-01' = {
   properties: {
     serverFarmId: hostingPlan.id
     siteConfig: {
+      
       // linuxFxVersion: 'DOTNET|6.0'
       appSettings: [
         //     {
@@ -140,7 +144,14 @@ resource azureFunction 'Microsoft.Web/sites@2020-12-01' = {
           name: 'TableName'
           value: 'imagetable'
         }
-
+        {
+          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
+        }
+        {
+          name: 'WEBSITE_CONTENTSHARE'
+          value: toLower(functionAppName)
+        }
         //     {
         //       name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
         //       value: 'DefaultEndpointsProtocol=https;AccountName=storageAccountName;AccountKey=${listKeys('storageAccountID3', '2019-06-01').key1}'
