@@ -25,7 +25,7 @@ public class Results
 
     [FunctionName("results")]
     public async Task<IActionResult> RunAsync(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)]
         HttpRequest req, ILogger log)
     {
         log.LogInformation("C# HTTP trigger function processed a request.");
@@ -49,7 +49,7 @@ public class Results
         }
 
         // If not found, return 404
-        catch (RequestFailedException e)
+        catch (RequestFailedException)
         {
             return new NotFoundObjectResult($"The image with id '{id}' does not exist.");
         }

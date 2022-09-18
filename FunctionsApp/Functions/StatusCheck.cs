@@ -23,7 +23,7 @@ public class StatusCheck
 
     [FunctionName("status")]
     public async Task<IActionResult> RunAsync(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)]
         HttpRequest req, ILogger log)
     {
         try
@@ -31,7 +31,7 @@ public class StatusCheck
             var test = await _tableClient.GetEntityAsync<StatusEntry>("status", req.Query["id"]);
             return new OkObjectResult("status: " + test.Value.Status);
         }
-        catch (RequestFailedException _)
+        catch (RequestFailedException)
         {
             return new BadRequestObjectResult("The given resource was not found.");
         }
