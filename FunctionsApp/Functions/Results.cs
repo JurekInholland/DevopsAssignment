@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Data.Tables;
@@ -31,6 +31,12 @@ public class Results
         log.LogInformation("C# HTTP trigger function processed a request.");
 
         string id = req.Query["id"];
+
+        if (id == null)
+        {
+            return new BadRequestObjectResult("No id was provided.");
+        }
+
         BlobClient blobClient = _blobContainerClient.GetBlobClient($"converted_{id}.png");
 
         // Happy path
@@ -40,15 +46,16 @@ public class Results
             return new FileStreamResult(blobStream, (await blobClient.GetPropertiesAsync()).Value.ContentType);
         }
 
-        // Get status from table storage
+        // Get status from table storage if blob doesn't exist yet
         try
         {
             Response<StatusEntry> entry = await _tableClient.GetEntityAsync<StatusEntry>("status", id);
             Console.WriteLine(entry.Value.Status);
-            return new OkObjectResult("The image is currently being processed.\nStatus: " + entry.Value.Status);
+            return new OkObjectResult($"The image is being processed.\nCurrent status: {entry.Value.Status}");
         }
 
-        // If not found, return 404
+        // If no status entry is found, return 404
+        // This should only happen if an incorrect id is provided
         catch (RequestFailedException)
         {
             return new NotFoundObjectResult($"The image with id '{id}' does not exist.");

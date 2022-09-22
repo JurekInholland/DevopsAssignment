@@ -41,7 +41,7 @@ public class ImageUpload
 
 
     /// <summary>
-    /// This function is triggered via an HTTP POST request.
+    /// This function is triggered via a HTTP POST request.
     /// If an image is passed via form data, it is uploaded to blob storage and a message is added to a queue.
     /// This will trigger the UploadQueueTrigger function.
     /// </summary>
@@ -49,35 +49,33 @@ public class ImageUpload
     public async Task<IActionResult> RunAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "")]
         HttpRequest req, ILogger log)
-
-
     {
         IFormFile f = req.Form.Files[0];
         if (f == null)
         {
-            return new OkObjectResult("No file");
+            return new BadRequestObjectResult("No file was provided.");
         }
 
-        var myBlob = f.OpenReadStream();
+        Stream myBlob = f.OpenReadStream();
 
+
+        BlobHttpHeaders header = new()
+        {
+            ContentType = f.ContentType
+        };
 
         string ext;
 
-        var header = new BlobHttpHeaders();
-        header.ContentType = f.ContentType;
-
-
-        if (f.ContentType == "image/jpeg")
+        switch (f.ContentType)
         {
-            ext = ".jpg";
-        }
-        else if (f.ContentType == "image/png")
-        {
-            ext = ".png";
-        }
-        else
-        {
-            return new OkObjectResult("Invalid file type. Please upload a .jpg or .png file.");
+            case "image/jpeg":
+                ext = ".jpg";
+                break;
+            case "image/png":
+                ext = ".png";
+                break;
+            default:
+                return new BadRequestObjectResult("Invalid file type. Only .jpg and .png files are supported.");
         }
 
 
@@ -89,16 +87,15 @@ public class ImageUpload
         {
             myBlob.Position = 0;
             await blob.UploadAsync(myBlob, header);
-            string encodedStr = Convert.ToBase64String(Encoding.UTF8.GetBytes(md5Hash + ext));
-            await _queueClient.SendMessageAsync(encodedStr);
+            await CreateQueueMessage(md5Hash + ext);
         }
         else
         {
             return new OkObjectResult($"Your file has already been processed!\nresult: /api/results?id={md5Hash}");
         }
 
-        var sasToken = blob.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddHours(1));
-        var sasTokenString = sasToken.AbsoluteUri;
+        Uri sasToken = blob.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddHours(1));
+        string sasTokenString = sasToken.AbsoluteUri;
         // generate sas uri of blob
         // blob.GenerateSasUri();
 
@@ -126,11 +123,11 @@ public class ImageUpload
     [FunctionName("UploadQueueTrigger")]
     public async Task RunAsync2([QueueTrigger("image-queue", Connection = "AzureWebJobsStorage")] string fileName, ILogger log)
     {
-        var id = fileName.Split('.')[0];
+        string id = fileName.Split('.')[0];
 
         log.LogInformation($"UploadQueueTrigger");
-        var image = _blobContainerClient.GetBlobClient(fileName);
-        var ms = new MemoryStream();
+        BlobClient image = _blobContainerClient.GetBlobClient(fileName);
+        MemoryStream ms = new();
 
 
         await UpdateStatus(id, "downloading image");
@@ -140,7 +137,7 @@ public class ImageUpload
 
         await UpdateStatus(id, "extracting colors");
         log.LogInformation("Extracting primary colors...");
-        var colors = ImageHelper.EditImage(ms.ToArray(), 2);
+        (byte[], string[]) colors = ImageHelper.EditImage(ms.ToArray(), 2);
 
 
         await UpdateStatus(id, "fetching color name");
@@ -171,7 +168,7 @@ public class ImageUpload
         await UpdateStatus(id, "uploading image");
 
         log.LogInformation("Uploading processed image...");
-        var header = new BlobHttpHeaders
+        BlobHttpHeaders header = new()
         {
             ContentType = "image/png"
         };
@@ -184,7 +181,7 @@ public class ImageUpload
     }
 
     /// <summary>
-    /// Returns the first paragraph of the wikipedia article for the given query.
+    /// Returns the first sentence of the wikipedia page for the given query.
     /// </summary>
     private async Task<string> FetchWikiExtract(string query)
     {
@@ -195,10 +192,12 @@ public class ImageUpload
         string content = await response.Content.ReadAsStringAsync();
         WikiResult wikiResult = JsonConvert.DeserializeObject<WikiResult>(content);
 
-        if (wikiResult.query.Pages.Count == 0)
-            return $"No wikipedia article found for '{query}'.";
+        string extract = wikiResult?.query.Pages.Values.First().Extract;
 
-        return wikiResult.query.Pages.Values.First().Extract.Split(". ")[0] + ".";
+        if (extract is null or "")
+            return $"No wikipedia page found for query \"{query}\".";
+
+        return extract.Split(". ")[0] + ".";
     }
 
     private async Task UpdateStatus(string id, string newStatus)
@@ -210,10 +209,16 @@ public class ImageUpload
 
     private async Task<string> GetColorName(string hexColor)
     {
-        var res = await _httpClient.GetAsync($"https://www.thecolorapi.com/id?hex={hexColor}");
+        HttpResponseMessage res = await _httpClient.GetAsync($"https://www.thecolorapi.com/id?hex={hexColor}");
 
-        var content = await res.Content.ReadAsStringAsync();
+        string content = await res.Content.ReadAsStringAsync();
         dynamic json = JsonConvert.DeserializeObject(content);
-        return json.name.value;
+        return json?.name.value;
+    }
+
+    private async Task CreateQueueMessage(string message)
+    {
+        string base64Message = Convert.ToBase64String(Encoding.UTF8.GetBytes(message));
+        await _queueClient.SendMessageAsync(base64Message);
     }
 }
