@@ -28,8 +28,8 @@ public class StatusCheck
     {
         try
         {
-            var test = await _tableClient.GetEntityAsync<StatusEntry>("status", req.Query["id"]);
-            return new OkObjectResult("status: " + test.Value.Status);
+            Response<StatusEntry> response = await _tableClient.GetEntityAsync<StatusEntry>("status", req.Query["id"]);
+            return new OkObjectResult("status: " + response.Value.Status);
         }
         catch (RequestFailedException)
         {

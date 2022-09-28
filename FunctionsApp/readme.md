@@ -10,3 +10,10 @@ az deployment group create --resource-group ssrRG --template-file main.bicep
 ````bash
 az group delete --name ssrRG --yes
 ````
+
+### The following endpoints are available
+````
+POST /api/upload
+GET /api/results?id=id
+GET /api/status?id=id
+````

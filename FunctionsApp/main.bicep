@@ -89,13 +89,10 @@ resource hostingPlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   sku: {
     name: 'Y1'
     tier: 'Dynamic'
-    size: 'Y1'
-    family: 'Y'
-    capacity: 0
   }
-  // properties: {
+  properties: {
     // reserved: true
-  // }
+  }
 }
 
 resource azureFunction 'Microsoft.Web/sites@2020-12-01' = {

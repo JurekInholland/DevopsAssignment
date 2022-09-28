@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Data.Tables;
@@ -9,6 +9,8 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.Resource;
 
 namespace FunctionsApp.Functions;
 
@@ -16,6 +18,7 @@ public class Results
 {
     private readonly BlobContainerClient _blobContainerClient;
     private readonly TableClient _tableClient;
+    static readonly string[] scopeRequiredByApi = new string[] { "access_as_user" };
 
     public Results(BlobServiceClient blobServiceClient, TableServiceClient tableServiceClient)
     {
@@ -28,7 +31,15 @@ public class Results
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)]
         HttpRequest req, ILogger log)
     {
-        log.LogInformation("C# HTTP trigger function processed a request.");
+
+
+        var (authenticationStatus, authenticationResponse) =
+            await req.HttpContext.AuthenticateAzureFunctionAsync();
+        if (!authenticationStatus) return authenticationResponse;
+
+        req.HttpContext.VerifyUserHasAnyAcceptedScope(scopeRequiredByApi);
+
+
 
         string id = req.Query["id"];
 
