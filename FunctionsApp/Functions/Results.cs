@@ -9,8 +9,6 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.Identity.Web;
-using Microsoft.Identity.Web.Resource;
 
 namespace FunctionsApp.Functions;
 
@@ -18,7 +16,6 @@ public class Results
 {
     private readonly BlobContainerClient _blobContainerClient;
     private readonly TableClient _tableClient;
-    static readonly string[] scopeRequiredByApi = new string[] { "access_as_user" };
 
     public Results(BlobServiceClient blobServiceClient, TableServiceClient tableServiceClient)
     {
@@ -31,15 +28,6 @@ public class Results
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)]
         HttpRequest req, ILogger log)
     {
-
-
-        var (authenticationStatus, authenticationResponse) =
-            await req.HttpContext.AuthenticateAzureFunctionAsync();
-        if (!authenticationStatus) return authenticationResponse;
-
-        req.HttpContext.VerifyUserHasAnyAcceptedScope(scopeRequiredByApi);
-
-
 
         string id = req.Query["id"];
 
@@ -57,7 +45,7 @@ public class Results
             return new FileStreamResult(blobStream, (await blobClient.GetPropertiesAsync()).Value.ContentType);
         }
 
-        // Get status from table storage if blob doesn't exist yet
+        // Get status from table storage if result blob doesn't exist yet
         try
         {
             Response<StatusEntry> entry = await _tableClient.GetEntityAsync<StatusEntry>("status", id);
@@ -66,7 +54,7 @@ public class Results
         }
 
         // If no status entry is found, return 404
-        // This should only happen if an incorrect id is provided
+        // This should only happen if an incorrect id is provided.
         catch (RequestFailedException)
         {
             return new NotFoundObjectResult($"The image with id '{id}' does not exist.");

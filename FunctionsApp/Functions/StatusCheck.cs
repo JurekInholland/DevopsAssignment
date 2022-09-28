@@ -3,13 +3,13 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Data.Tables;
 using FunctionsApp.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-namespace FunctionsApp;
+namespace FunctionsApp.Functions;
 
 public class StatusCheck
 {
