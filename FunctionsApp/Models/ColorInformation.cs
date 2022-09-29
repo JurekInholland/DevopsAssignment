@@ -4,6 +4,10 @@ namespace FunctionsApp.Models;
 
 public class ColorInformation
 {
-    [JsonProperty("name")]
-    public string Name;
+    public class ColorName
+    {
+        [JsonProperty("Value")] public string Value { get; set; }
+    }
+
+    public ColorName Name { get; set; }
 }

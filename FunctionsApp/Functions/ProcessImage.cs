@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -122,7 +123,8 @@ public class ProcessImage
         HttpResponseMessage res = await _httpClient.GetAsync($"https://www.thecolorapi.com/id?hex={hexColor}");
 
         string content = await res.Content.ReadAsStringAsync();
-        dynamic json = JsonConvert.DeserializeObject(content);
-        return json?.name.value;
+        ColorInformation colorInfo = JsonConvert.DeserializeObject<ColorInformation>(content);
+
+        return colorInfo?.Name is null ? "Unknown color" : colorInfo.Name.Value;
     }
 }
