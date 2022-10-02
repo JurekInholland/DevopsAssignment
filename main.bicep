@@ -4,13 +4,10 @@ param storageAccountName string = 'storage${uniqueString(resourceGroup().id)}'
 param functionAppName string = 'function${uniqueString(resourceGroup().id)}'
 param hostingPlanName string = 'hostingPlan${uniqueString(resourceGroup().id)}'
 
-
 param storageContainerName string = 'image-container'
 param queueName string = 'image-queue'
 param queueName2 string = 'process-queue'
 param tableName string = 'imagetable'
-
-
 
 // Storage
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
@@ -85,14 +82,11 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
 resource hostingPlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: hostingPlanName
   location: location
-  // kind: 'linux'
   sku: {
     name: 'Y1'
     tier: 'Dynamic'
   }
-  properties: {
-    // reserved: true
-  }
+  properties: {}
 }
 
 resource azureFunction 'Microsoft.Web/sites@2020-12-01' = {
@@ -102,13 +96,7 @@ resource azureFunction 'Microsoft.Web/sites@2020-12-01' = {
   properties: {
     serverFarmId: hostingPlan.id
     siteConfig: {
-      
-      // linuxFxVersion: 'DOTNET|6.0'
       appSettings: [
-        //     {
-        //       name: 'AzureWebJobsDashboard'
-        //       value: 'DefaultEndpointsProtocol=https;AccountName=storageAccountName;AccountKey=${listKeys('storageAccountID1', '2019-06-01').key1}'
-        //     }
         {
           name: 'AzureWebJobsStorage__accountName'
           value: storageAccount.name
@@ -117,10 +105,6 @@ resource azureFunction 'Microsoft.Web/sites@2020-12-01' = {
           name: 'FUNCTIONS_EXTENSION_VERSION'
           value: '~4'
         }
-        // {
-        //   name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-        //   value: appInsightsComponents.properties.InstrumentationKey
-        // }
         {
           name: 'FUNCTIONS_WORKER_RUNTIME'
           value: 'dotnet'
@@ -149,26 +133,6 @@ resource azureFunction 'Microsoft.Web/sites@2020-12-01' = {
           name: 'WEBSITE_CONTENTSHARE'
           value: toLower(functionAppName)
         }
-        //     {
-        //       name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-        //       value: 'DefaultEndpointsProtocol=https;AccountName=storageAccountName;AccountKey=${listKeys('storageAccountID3', '2019-06-01').key1}'
-        //     }
-        //     {
-        //       name: 'WEBSITE_CONTENTSHARE'
-        //       value: toLower('name')
-        //     }
-        //     {
-        //       name: 'FUNCTIONS_EXTENSION_VERSION'
-        //       value: '~2'
-        //     }
-        //     {
-        //       name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-        //       value: reference('insightsComponents.id', '2015-05-01').InstrumentationKey
-        //     }
-        //     {
-        //       name: 'FUNCTIONS_WORKER_RUNTIME'
-        //       value: 'dotnet'
-        //     }
       ]
     }
   }
