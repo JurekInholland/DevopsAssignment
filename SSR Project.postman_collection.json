@@ -1,102 +1,230 @@
 {
-	"variables": [],
 	"info": {
-		"name": "SSR Project",
-		"_postman_id": "637a68f1-2f72-e472-8297-5d59bf010519",
-		"description": "",
-		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+		"_postman_id": "5b96720e-5ad1-44ac-9e8b-b8ad2880a6e8",
+		"name": "Devops Project",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "9590743"
 	},
 	"item": [
 		{
-			"name": "Get Status",
-			"request": {
-				"url": "{{base_url}}/api/StatusCheck",
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json",
-						"description": ""
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n\t\"name\": \"DA39A3EE5E6B4B0D3255BFEF95601890AFD80709\"\n}"
+			"name": "Local endpoints",
+			"item": [
+				{
+					"name": "Upload Image",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/upload",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"upload"
+							]
+						}
+					},
+					"response": []
 				},
-				"description": "Upload an image to the service."
-			},
-			"response": []
+				{
+					"name": "Get Status",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{base_url}}/api/status?id=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"status"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						},
+						"description": "Upload an image to the service."
+					},
+					"response": []
+				},
+				{
+					"name": "Get result",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/results?id=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"results"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		},
 		{
-			"name": "Upload Image",
-			"request": {
-				"url": "{{base_url}}/api/upload",
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "formdata",
-					"formdata": [
-						{
-							"key": "",
-							"description": "",
-							"type": "file",
-							"src": "red.png"
+			"name": "Production Endpoints",
+			"item": [
+				{
+					"name": "Upload Image",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{function_url}}/api/upload",
+							"host": [
+								"{{function_url}}"
+							],
+							"path": [
+								"api",
+								"upload"
+							]
 						}
-					]
+					},
+					"response": []
 				},
-				"description": ""
-			},
-			"response": []
+				{
+					"name": "Get Status",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{function_url}}/api/status?id=",
+							"host": [
+								"{{function_url}}"
+							],
+							"path": [
+								"api",
+								"status"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						},
+						"description": "Upload an image to the service."
+					},
+					"response": []
+				},
+				{
+					"name": "Get result",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{function_url}}/api/results?id=",
+							"host": [
+								"{{function_url}}"
+							],
+							"path": [
+								"api",
+								"results"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
 		},
 		{
-			"name": "Upload Image copy",
-			"request": {
-				"url": "https://functiony6tlukywf6l3g.azurewebsites.net/api/upload",
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "formdata",
-					"formdata": [
-						{
-							"key": "",
-							"description": "",
-							"type": "file",
-							"src": "grey.png"
-						}
-					]
-				},
-				"description": ""
-			},
-			"response": []
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": " http://localhost:7071",
+			"type": "string"
 		},
 		{
-			"name": "Get result",
-			"request": {
-				"url": {
-					"raw": "{{base_url}}/api/results?id=2f1b5245ac25fa1b1015f2205c8562ab",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"results"
-					],
-					"query": [
-						{
-							"key": "id",
-							"value": "2f1b5245ac25fa1b1015f2205c8562ab",
-							"equals": true,
-							"description": ""
-						}
-					],
-					"variable": []
-				},
-				"method": "GET",
-				"header": [],
-				"body": {},
-				"description": ""
-			},
-			"response": []
+			"key": "function_url",
+			"value": "https://functiony6tlukywf6l3g.azurewebsites.net",
+			"type": "string"
 		}
 	]
 }
