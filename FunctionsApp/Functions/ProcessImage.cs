@@ -34,17 +34,20 @@ public class ProcessImage
     /// It fetches the given image from blob storage and processes it.
     /// </summary>
     [FunctionName("processImage")]
-    public async Task RunAsync([QueueTrigger("image-queue", Connection = "AzureWebJobsStorage")] string fileName, ILogger log)
+    public async Task RunAsync([QueueTrigger("image-queue", Connection = "AzureWebJobsStorage")] string queueMessage, ILogger log)
     {
-        string id = fileName.Split('.')[0];
+        QueueMessage message = JsonConvert.DeserializeObject<QueueMessage>(queueMessage);
+
+        string id = message?.Id;
 
         log.LogInformation("UploadQueueTrigger");
-        BlobClient image = _blobContainerClient.GetBlobClient(fileName);
+
+        BlobClient image = new BlobClient(AssembleSasTokenUri(message));
         MemoryStream ms = new();
 
 
         await UpdateStatus(id, "downloading image");
-        log.LogInformation("Downloading image...");
+        log.LogInformation("Downloading image via SasToken...");
         await image.DownloadToAsync(ms);
 
 
@@ -126,5 +129,10 @@ public class ProcessImage
         ColorInformation colorInfo = JsonConvert.DeserializeObject<ColorInformation>(content);
 
         return colorInfo?.Name is null ? "Unknown color" : colorInfo.Name.Value;
+    }
+
+    private Uri AssembleSasTokenUri(QueueMessage message)
+    {
+        return new Uri(_blobContainerClient.Uri + "/" + message.Id + message.Extension + message.SasQuery);
     }
 }

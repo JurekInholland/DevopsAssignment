@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace FunctionsApp.Functions;
 
@@ -46,6 +47,7 @@ public class ImageUpload
         {
             return new BadRequestObjectResult("No file provided.");
         }
+
         IFormFile f = req.Form.Files[0];
         Stream myBlob = f.OpenReadStream();
         BlobHttpHeaders header = new()
@@ -70,20 +72,24 @@ public class ImageUpload
 
         BlobClient blob = _blobContainerClient.GetBlobClient(md5Hash + ext);
 
-        if (!await blob.ExistsAsync())
-        {
-            myBlob.Position = 0;
-            await blob.UploadAsync(myBlob, header);
-            await CreateQueueMessage(md5Hash + ext);
-        }
-        else
+
+        if (await blob.ExistsAsync())
         {
             return new OkObjectResult($"Your file has already been processed!\nresult: /api/results?id={md5Hash}");
         }
 
-        // Todo: use
         Uri sasToken = blob.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddHours(1));
-        string sasTokenString = sasToken.AbsoluteUri;
+        QueueMessage message = new()
+        {
+            Id = md5Hash,
+            Extension = ext,
+            SasQuery = sasToken.Query
+        };
+
+        myBlob.Position = 0;
+        await blob.UploadAsync(myBlob, header);
+        await CreateQueueMessage(message);
+
 
         try
         {
@@ -101,10 +107,11 @@ public class ImageUpload
     }
 
 
-
-    private async Task CreateQueueMessage(string message)
+    private async Task CreateQueueMessage(QueueMessage message)
     {
-        string base64Message = Convert.ToBase64String(Encoding.UTF8.GetBytes(message));
+        string messageJson = JsonConvert.SerializeObject(message, Formatting.None);
+
+        string base64Message = Convert.ToBase64String(Encoding.UTF8.GetBytes(messageJson));
         await _queueClient.SendMessageAsync(base64Message);
     }
 }

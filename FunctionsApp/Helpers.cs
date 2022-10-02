@@ -10,7 +10,7 @@ public static class Helpers
 
     public static string GenerateMd5Hash(Stream stream)
     {
-        var hash = Algo.ComputeHash(stream);
+        byte[] hash = Algo.ComputeHash(stream);
         return string.Concat(hash.Select(b => b.ToString("x2")));
     }
 }
